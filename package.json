@@ -1,0 +1,27 @@
+{
+  "name": "kaw",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "asyncawait": "^1.0.6",
+    "cli-table": "^0.3.1",
+    "colors": "^1.1.2",
+    "cron": "^1.2.1",
+    "express": "^4.15.3",
+    "fs": "^0.0.1-security",
+    "lodash": "^4.17.4",
+    "node-cache": "^4.1.1",
+    "progress": "^2.0.0",
+    "proxy-lists": "^1.11.1",
+    "request": "^2.81.0",
+    "request-promise": "^4.2.1",
+    "socket.io": "^2.0.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
