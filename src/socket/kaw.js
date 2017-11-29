@@ -1,6 +1,6 @@
 "use strict"
 
-var request = require('request')
+var request = require('requestretry')
 var colors = require('colors')
 
 class Kaw {
@@ -23,13 +23,11 @@ class Kaw {
             }
 
             if (err) {
-                console.log(err);
                 reject(err);
                 return;
             }
 
             if (res.statusCode > 299) {
-                console.log(body);
                 return setTimeout(() => {
                     reject(body);
                     return;
@@ -46,7 +44,9 @@ class Kaw {
             url: this.target,
             headers: this.headers,
             form: this.body,
-            json: true
+            json: true,
+            maxAttempts: 5,
+            retryDelay: 20000,
         };
     }
 }
@@ -71,6 +71,7 @@ class Auth extends Kaw {
         .then((user) => {
             console.log('==============================================')
             console.log(colors.green('Logged in as: ') + colors.red(user.game_user.username))
+            console.log(colors.yellow(user.session_id))
             console.log()
 
             return user
