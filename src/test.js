@@ -12,7 +12,7 @@ let user, allies = [],
         offsets: [0, 50, 100, 150, 200, 250, 300, 350, 400, 450],
         limit: 50,
         min_cost: 0,
-        max_cost: 150523070492768
+        max_cost: 148523070492768
     }
 
 const run = () => {
