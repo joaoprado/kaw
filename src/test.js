@@ -11,100 +11,86 @@ let user, allies = [],
     params = {
         offsets: [0, 50, 100, 150, 200, 250, 300, 350, 400, 450],
         limit: 50,
-        min_cost: 0,
-        max_cost: 148523070492768
+        min_cost: 100000000000000,
+        max_cost: 150000000000000
     }
 
-const run = () => {
-    console.log('==============================================')
-    console.log(colors.green('Initiating the app...'))
-    console.log()
 
-    Auth.login()
-        .then((data) => user = data)
-        .then(() => searchAllies())
-        .then(() => tabulateAllies())
-}
-
-const searchAllies = (max_cost = null) => {
-    let requests = []
-
-    max_cost = max_cost == null ? params.max_cost : max_cost
-
-    for(i = 0; i < params.offsets.length; i++) {
-        requests.push(pullSingleList(i, max_cost))
-    }
-
-    return Promise.all(requests)
-        .then(() => {
-            allies = _.flatten(allies)
-            allies = _.orderBy(allies, (ally) => {
-                return ally.cost
-            })
-            return allies
-        })
-        .then(() => {
-            let lastAllyCost = _.head(_.orderBy(allies, 'cost', 'desc')).cost
-            // if(lastAllyCost > params.min_cost) {
-            //     return searchAllies(lastAllyCost-1)
-            // }
-            return allies
-        })
-        .catch((error) => console.log(error))
-}
-
-const pullSingleList = (i, max_cost) => {
-    return new AllyList(
-        user.session_id,
-        params.limit,
-        params.offsets[i],
-        params.min_cost,
-        max_cost
-    )
-    .post()
-    .then((data) => allies.push(data.users))
-}
-
-const tabulateAllies = () => {
-    let goodAllies = [],
-        table = new Table({
-            head: ['Username', 'Cost', 'Ratio', 'Combined stats', 'Attack', 'Defense', 'Spy Attack', 'Spy Defense', 'Has spell'],
-            style: { 'padding-left': 0, 'padding-right': 0 }
-        })
-
-    console.log('==============================================')
-    console.log("Analyzing allies list...".yellow)
-    console.log()
-
-    for(i = 0; i < allies.length; i++) {
-        let ally = allies[i],
-            combinedStats = ally.bonus.attack + ally.bonus.defense + ally.bonus.spy_attack + ally.bonus.spy_defense,
-            ratio = (combinedStats/ally.cost)*1000000
-
-        ally['combined_stats'] = combinedStats
-        ally['ratio'] = ratio
-
-        if(ratio > 5 && ally.superpower_expire_date != null) {
-            goodAllies.push(ally)
-            table.push([
-                ally.username,
-                ally.cost,
-                (Math.round(ally.ratio * 100) / 100),
-                combinedStats,
-                ally.bonus.attack,
-                ally.bonus.defense,
-                ally.bonus.spy_attack,
-                ally.bonus.spy_defense,
-                ally.superpower_expire_date != null ? 'Yes' : 'No'
-            ])
+Auth.login()
+    .then((data) => {
+        user = data
+        console.group('Analyzing allies data')
+        return params.max_cost
+    })
+    .then(
+        function(max_cost) {
+            var allySearchPromiseBranch = pullAllies(max_cost)
+            return (allySearchPromiseBranch)
         }
-    }
-    console.log("Total allies count: " + allies.length)
-    console.log("Total tradeable allies count: " + goodAllies.length)
-    console.log(colors.green("The best ally found was:") + colors.yellow(_.head(_.orderBy(goodAllies, 'ratio', 'desc')).username) + colors.green(" with a ratio of ") + colors.yellow(_.head(_.orderBy(goodAllies, 'ratio', 'desc')).ratio))
+    )
+    .then(
+        function(list) {
+            console.log(JSON.stringify(list))
+            console.groupEnd()
+        }
+    )
+    .catch(console.error.bind(console))
 
-    console.log('==============================================')
-    console.log(table.toString())
+const pullAllies = (max_cost) => {
+    if(max_cost < params.min_cost) {
+        return allies
+    }
+
+    console.log('Pulling allies for max_cost ' + max_cost)
+
+    var allySearchPromiseBranch = Promise.resolve().then(
+            function() {
+                var allyListPromiseBranch = pullSingleList(0, params.max_cost)
+                return (allyListPromiseBranch)
+            }
+        )
+        .then(
+            function() {
+                var cost = allies[allies.length-1].cost
+                console.log(JSON.stringify(allies[allies.length-1]))
+                return pullAllies(cost - 10)
+            }
+        )
+        .catch(console.error.bind(console))
+
+    return (allySearchPromiseBranch)
 }
 
-run()
+const pullSingleList = (offset, max_cost) => {
+    if(offset > 450) {
+        return allies
+    }
+
+    console.log('Pulling ally list for offset ' + offset)
+
+    var allyListPromiseBranch = new AllyList(
+            user.session_id,
+            params.limit,
+            offset,
+            params.min_cost,
+            max_cost
+        )
+        .post()
+        .then(
+            function(data) {
+                allies.push(data.users)
+                allies = _.flatten(allies)
+                return (pullSingleList(offset+50, max_cost))
+            }
+        )
+        .catch(
+            function(error) {
+                console.log("Error. Trying again...")
+                setTimeout(function() {
+                    return (pullSingleList(offset, max_cost))
+                }, 10000)
+            }
+        )
+
+    return (allyListPromiseBranch)
+}
